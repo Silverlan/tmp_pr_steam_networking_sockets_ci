@@ -1,0 +1,1 @@
+include("../server/CMakeLists.txt")

@@ -2,23 +2,25 @@ cmake_minimum_required(VERSION 3.12)
 
 include("../../CMakeShared.txt")
 
-set(PROJ_NAME pr_steam_networking_server)
+set(PROJ_NAME ${PROJ_NAME_PREFIX}_server)
 
 project(${PROJ_NAME} CXX)
 
 # set(PRECOMPILED_HEADER "stdafx")
 
 add_include_dir(networkmanager)
-link_external_library(valve_gamenetworkingsockets)
-link_external_library(openssl)
-link_external_library(protobuf)
-link_external_library(server)
 
-set(CONFIG_ENABLE_STEAM_NETWORKING_STEAM_SERVER_SUPPORT ON CACHE BOOL "Enable steam server support for pr_steam_networking module?")
-if(CONFIG_ENABLE_STEAM_NETWORKING_STEAM_SERVER_SUPPORT MATCHES ON)
+if(CONFIG_USE_STEAMWORKS_NETWORKING MATCHES ON)
+	add_definitions(-DUSE_STEAMWORKS_NETWORKING)
+
 	link_external_library(steamworks)
-	add_def(ENABLE_STEAM_SERVER_SUPPORT)
+else()
+	link_external_library(valve_gamenetworkingsockets)
+	link_external_library(openssl)
+	link_external_library(protobuf)
 endif()
+
+link_external_library(server)
 
 add_source_path("${CMAKE_CURRENT_LIST_DIR}/../shared")
 

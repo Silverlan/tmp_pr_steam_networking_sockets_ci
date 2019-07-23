@@ -1,11 +1,13 @@
 #ifndef __PR_STEAM_NETWORKING_SHARED_HPP__
 #define __PR_STEAM_NETWORKING_SHARED_HPP__
 
-#undef ENABLE_STEAM_SERVER_SUPPORT
+#ifdef USE_STEAMWORKS_NETWORKING
+#include <steam/steam_api.h>
+#include <steam/isteamnetworkingsockets.h>
+#include <steam/isteamnetworkingutils.h>
+#else
 #include <steam/steamnetworkingsockets.h>
 #include <steam/isteamnetworkingutils.h>
-#ifdef ENABLE_STEAM_SERVER_SUPPORT
-#include <steam/steam_api.h>
 #endif
 #include <pragma/networking/enums.hpp>
 #include <pragma/networking/error.hpp>

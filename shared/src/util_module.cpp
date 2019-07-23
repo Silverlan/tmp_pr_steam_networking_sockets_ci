@@ -27,10 +27,22 @@ bool initialize_steam_game_networking_sockets(std::string &err)
 	if(numInstances == 0)
 	{
 		// This is the first library instance; Initialize the game networking sockets (This must only be done once per application)
-		SteamDatagramErrMsg errMsg {};
-		if(numInstances == -1 || GameNetworkingSockets_Init(nullptr,errMsg) == false)
+		auto success = numInstances != -1;
+		std::string errMsg = "";
+		if(success)
 		{
-			err = "Unable to initialize game networking sockets: " +std::string{errMsg};
+#ifdef USE_STEAMWORKS_NETWORKING
+			success = SteamAPI_Init();
+#else
+			SteamDatagramErrMsg err {};
+			success = GameNetworkingSockets_Init(nullptr,err);
+			if(success == false)
+				errMsg = err;
+#endif
+		}
+		if(success == false)
+		{
+			err = "Unable to initialize game networking sockets: " +errMsg;
 			engine->SetConVar(cvarNameInstances,std::to_string(-1));
 			return false;
 		}
@@ -45,6 +57,12 @@ void kill_steam_game_networking_sockets()
 	if(numInstances <= 0)
 		return;
 	if(numInstances == 1) // This is the last library instance
+	{
+#ifdef USE_STEAMWORKS_NETWORKING
+		SteamAPI_Shutdown();
+#else
 		GameNetworkingSockets_Kill();
+#endif
+	}
 	engine->SetConVar(cvarNameInstances,std::to_string(numInstances -1));
 }
