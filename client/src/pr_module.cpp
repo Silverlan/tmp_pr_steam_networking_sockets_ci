@@ -1,5 +1,6 @@
 #include "pr_module.hpp"
-#include <pr_steam_networking_shared.hpp>
+#include <pr_steam_networking/common.hpp>
+#include <pr_steam_networking/util_net_packet.hpp>
 #include <sharedutils/util_weak_handle.hpp>
 #include <pragma/networking/iclient.hpp>
 #include <pragma/networking/error.hpp>
@@ -12,7 +13,8 @@
 class SteamClient
 	: public pragma::networking::IClient,
 	public NetPacketReceiver,public NetPacketDispatcher,
-	private ISteamNetworkingSocketsCallbacks
+	private ISteamNetworkingSocketsCallbacks,
+	public BaseSteamNetworkingSocket
 {
 public:
 	bool Initialize(pragma::networking::Error &outErr);
@@ -29,50 +31,41 @@ public:
 	virtual std::optional<pragma::networking::Port> GetLocalTCPPort() const override;
 	virtual std::optional<pragma::networking::Port> GetLocalUDPPort() const override;
 	virtual void OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t *cbInfo) override;
-
-	static void DebugOutput(ESteamNetworkingSocketsDebugOutputType eType,const char *msg);
 protected:
 	bool PollMessages(pragma::networking::Error &outErr);
 private:
-	ISteamNetworkingSockets *m_pInterface = nullptr;
 	HSteamNetConnection m_hConnection = k_HSteamNetConnection_Invalid;
-	SteamNetworkingMicroseconds m_logTimeZero = 0;
+	SteamNetworkingQuickConnectionStatus m_connectionStatus = {};
 	bool m_bConnected = false;
 };
 
-void SteamClient::DebugOutput(ESteamNetworkingSocketsDebugOutputType eType,const char *msg)
-{
-	std::cout<<"Debug Output: "<<msg<<std::endl;
-}
-
 bool SteamClient::Initialize(pragma::networking::Error &outErr)
 {
-	m_logTimeZero = SteamNetworkingUtils()->GetLocalTimestamp();
-	SteamNetworkingUtils()->SetDebugOutputFunction(k_ESteamNetworkingSocketsDebugOutputType_Msg,DebugOutput);
-	m_pInterface = SteamNetworkingSockets();
+	BaseSteamNetworkingSocket::Initialize();
 	return true;
 }
 
 std::string SteamClient::GetIdentifier() const
 {
 	std::array<char,4'096> conName;
-	if(m_pInterface->GetConnectionName(m_hConnection,conName.data(),conName.size()) == false)
+	if(GetSteamInterface().GetConnectionName(m_hConnection,conName.data(),conName.size()) == false)
 		return "";
 	return conName.data();
 }
+
 bool SteamClient::Connect(const std::string &ip,pragma::networking::Port port,pragma::networking::Error &outErr)
 {
 	SteamNetworkingIPAddr ipAddr {};
 	if(ipAddr.ParseString((ip +':' +std::to_string(port)).c_str()) == false)
 		return false;
-	m_hConnection = m_pInterface->ConnectByIPAddress(ipAddr);
+	m_hConnection = GetSteamInterface().ConnectByIPAddress(ipAddr);
 	return m_hConnection != k_HSteamNetConnection_Invalid;
 }
 bool SteamClient::Disconnect(pragma::networking::Error &outErr)
 {
-	// TODO: Reason, etc
-	auto result = m_pInterface->CloseConnection(m_hConnection,k_ESteamNetConnectionEnd_App_Min,"",false);
-	m_pInterface->CloseConnection(m_hConnection,0,nullptr,false);
+	// TODO: Reason, etc.
+	auto result = GetSteamInterface().CloseConnection(m_hConnection,k_ESteamNetConnectionEnd_App_Min,"",false);
+	GetSteamInterface().CloseConnection(m_hConnection,0,nullptr,false);
 	m_hConnection = k_HSteamNetConnection_Invalid;
 	m_bConnected = false;
 	if(result == false)
@@ -82,7 +75,7 @@ bool SteamClient::Disconnect(pragma::networking::Error &outErr)
 }
 bool SteamClient::SendPacket(pragma::networking::Protocol protocol,NetPacket &packet,pragma::networking::Error &outErr)
 {
-	return NetPacketDispatcher::SendPacket(*m_pInterface,m_hConnection,protocol,packet,outErr);
+	return NetPacketDispatcher::SendPacket(GetSteamInterface(),m_hConnection,protocol,packet,outErr);
 }
 bool SteamClient::IsRunning() const
 {
@@ -99,7 +92,7 @@ bool SteamClient::PollMessages(pragma::networking::Error &outErr)
 	if(!m_hConnection)
 		return true; // Nothing to poll
 	std::array<ISteamNetworkingMessage*,256> incommingMessages;
-	auto numMsgs = m_pInterface->ReceiveMessagesOnConnection(m_hConnection,incommingMessages.data(),incommingMessages.size());
+	auto numMsgs = GetSteamInterface().ReceiveMessagesOnConnection(m_hConnection,incommingMessages.data(),incommingMessages.size());
 	if(numMsgs < 0)
 	{
 		outErr = {pragma::networking::ErrorCode::GenericError,"Invalid connection!"};
@@ -108,7 +101,7 @@ bool SteamClient::PollMessages(pragma::networking::Error &outErr)
 	for(auto i=decltype(numMsgs){0u};i<numMsgs;++i)
 	{
 		auto *pIncomingMsg = incommingMessages.at(i);
-		auto packet = ReceiveDataFragment(*pIncomingMsg);
+		auto packet = ReceiveDataFragment(*this,*pIncomingMsg);
 		if(packet.has_value())
 			HandlePacket(*packet);
 		pIncomingMsg->Release();
@@ -118,18 +111,19 @@ bool SteamClient::PollMessages(pragma::networking::Error &outErr)
 bool SteamClient::PollEvents(pragma::networking::Error &outErr)
 {
 	auto success = PollMessages(outErr);
-	m_pInterface->RunCallbacks(this);
+	GetSteamInterface().RunCallbacks(this);
+	GetSteamInterface().GetQuickConnectionStatus(m_hConnection,&m_connectionStatus);
 	return success;
 }
 uint16_t SteamClient::GetLatency() const
 {
-	return 0; // TODO
+	return m_connectionStatus.m_nPing;
 }
 void SteamClient::SetTimeoutDuration(float duration) {}
 std::optional<std::string> SteamClient::GetIP() const
 {
 	SteamNetConnectionInfo_t info;
-	if(m_pInterface->GetConnectionInfo(m_hConnection,&info) == false)
+	if(GetSteamInterface().GetConnectionInfo(m_hConnection,&info) == false)
 		return {};
 	auto &address = info.m_addrRemote;
 	std::array<char,MAX_IP_CHAR_LENGTH> ip;
@@ -158,7 +152,7 @@ void SteamClient::OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChan
 		break;
 	case k_ESteamNetworkingConnectionState_ClosedByPeer:
 	case k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
-		m_pInterface->CloseConnection(cbInfo->m_hConn,0,nullptr,false);
+		GetSteamInterface().CloseConnection(cbInfo->m_hConn,0,nullptr,false);
 		m_hConnection = k_HSteamNetConnection_Invalid;
 		m_bConnected = false;
 

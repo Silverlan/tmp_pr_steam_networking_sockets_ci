@@ -1,5 +1,6 @@
 #include "pr_module.hpp"
-#include <pr_steam_networking_shared.hpp>
+#include <pr_steam_networking/common.hpp>
+#include <pr_steam_networking/util_net_packet.hpp>
 #include <sharedutils/util_weak_handle.hpp>
 #include <pragma/networking/iserver.hpp>
 #include <pragma/networking/iserver_client.hpp>
@@ -84,7 +85,8 @@ bool SteamServerClient::SendPacket(pragma::networking::Protocol protocol,NetPack
 
 class SteamServer
 	: public pragma::networking::IServer,
-	private ISteamNetworkingSocketsCallbacks
+	private ISteamNetworkingSocketsCallbacks,
+	public BaseSteamNetworkingSocket
 {
 public:
 	virtual bool DoShutdown(pragma::networking::Error &outErr) override;
@@ -99,34 +101,23 @@ public:
 
 	// Steam callbacks
 	virtual void OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t *info) override;
-
-	static void DebugOutput(ESteamNetworkingSocketsDebugOutputType eType,const char *msg);
 protected:
 	bool PollMessages(pragma::networking::Error &outErr);
 	virtual bool DoStart(pragma::networking::Error &outErr) override;
 private:
-	ISteamNetworkingSockets *m_pInterface = nullptr;
 	HSteamListenSocket m_hListenSock = 0;
-	SteamNetworkingMicroseconds m_logTimeZero = 0;
 	std::unordered_map<HSteamNetConnection,SteamServerClient*> m_conHandleToClient = {};
 	pragma::networking::Error m_statusError = {};
 };
 
-void SteamServer::DebugOutput(ESteamNetworkingSocketsDebugOutputType eType,const char *msg)
-{
-	std::cout<<"Debug Output: "<<msg<<std::endl;
-}
-
 bool SteamServer::DoStart(pragma::networking::Error &outErr)
 {
-	m_logTimeZero = SteamNetworkingUtils()->GetLocalTimestamp();
-	SteamNetworkingUtils()->SetDebugOutputFunction(k_ESteamNetworkingSocketsDebugOutputType_Msg,DebugOutput);
-	m_pInterface = SteamNetworkingSockets();
+	BaseSteamNetworkingSocket::Initialize();
 
 	SteamNetworkingIPAddr serverLocalAddr;
 	serverLocalAddr.Clear();
 	serverLocalAddr.m_port = 29150; // TODO
-	m_hListenSock = m_pInterface->CreateListenSocketIP(serverLocalAddr);
+	m_hListenSock = GetSteamInterface().CreateListenSocketIP(serverLocalAddr);
 	if(m_hListenSock == k_HSteamListenSocket_Invalid)
 	{
 		outErr = {pragma::networking::ErrorCode::UnableToListenOnPort,"Failed to listen on port " +std::to_string(serverLocalAddr.m_port) +"!"};
@@ -151,7 +142,7 @@ std::optional<pragma::networking::Port> SteamServer::GetLocalUDPPort() const {re
 bool SteamServer::PollMessages(pragma::networking::Error &outErr)
 {
 	std::array<ISteamNetworkingMessage*,256> incommingMessages;
-	auto numMsgs = m_pInterface->ReceiveMessagesOnListenSocket(m_hListenSock,incommingMessages.data(),incommingMessages.size());
+	auto numMsgs = GetSteamInterface().ReceiveMessagesOnListenSocket(m_hListenSock,incommingMessages.data(),incommingMessages.size());
 	if(numMsgs < 0)
 		return false;
 	if(numMsgs == 0)
@@ -165,7 +156,7 @@ bool SteamServer::PollMessages(pragma::networking::Error &outErr)
 		else
 		{
 			auto &client = *itClient->second;
-			auto packet = client.ReceiveDataFragment(*pIncomingMsg);
+			auto packet = client.ReceiveDataFragment(*this,*pIncomingMsg);
 			if(packet.has_value())
 				HandlePacket(client,*packet);
 		}
@@ -176,12 +167,12 @@ bool SteamServer::PollMessages(pragma::networking::Error &outErr)
 bool SteamServer::PollEvents(pragma::networking::Error &outErr)
 {
 	auto success = PollMessages(outErr);
-	m_pInterface->RunCallbacks(this);
+	GetSteamInterface().RunCallbacks(this);
 	return success;
 }
 void SteamServer::SetTimeoutDuration(float duration) {}
 
-ISteamNetworkingSockets &SteamServer::GetInterface() const {return *m_pInterface;}
+ISteamNetworkingSockets &SteamServer::GetInterface() const {return GetSteamInterface();}
 
 void SteamServer::OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t *pInfo)
 {
@@ -192,7 +183,7 @@ void SteamServer::OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChan
 		break;
 	case k_ESteamNetworkingConnectionState_Connecting:
 	{
-		auto result = m_pInterface->AcceptConnection(pInfo->m_hConn);
+		auto result = GetSteamInterface().AcceptConnection(pInfo->m_hConn);
 		if(result != k_EResultOK)
 		{
 			if(result == k_EResultInvalidParam)
@@ -204,7 +195,7 @@ void SteamServer::OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChan
 				// TODO: Find out what's going on here and fix this!
 				break;
 			};
-			m_pInterface->CloseConnection(pInfo->m_hConn,0,nullptr,false);
+			GetSteamInterface().CloseConnection(pInfo->m_hConn,0,nullptr,false);
 			m_statusError = {pragma::networking::ErrorCode::UnableToAcceptClient,"Client could not be accepted!",result};
 			break;
 		}
@@ -224,7 +215,7 @@ void SteamServer::OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChan
 	case k_ESteamNetworkingConnectionState_ClosedByPeer:
 	case k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
 	{
-		m_pInterface->CloseConnection(pInfo->m_hConn,0,nullptr,false);
+		GetSteamInterface().CloseConnection(pInfo->m_hConn,0,nullptr,false);
 		auto itCl = m_conHandleToClient.find(pInfo->m_hConn);
 		if(itCl == m_conHandleToClient.end())
 		{

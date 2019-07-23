@@ -20,7 +20,7 @@ if(CONFIG_ENABLE_STEAM_NETWORKING_STEAM_SERVER_SUPPORT MATCHES ON)
 	add_def(ENABLE_STEAM_SERVER_SUPPORT)
 endif()
 
+add_source_path("${CMAKE_CURRENT_LIST_DIR}/../shared")
+
 link_generic_module_libraries()
 register_pragma_module(${PROJ_NAME})
-
-target_include_directories(${PROJ_NAME} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../shared/include)
