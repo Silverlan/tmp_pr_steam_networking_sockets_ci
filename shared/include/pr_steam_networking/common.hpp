@@ -15,6 +15,7 @@
 #include <pragma/networkstate/networkstate.h>
 #include <sharedutils/netpacket.hpp>
 #include <sharedutils/util_library.hpp>
+#include <sharedutils/util_clock.hpp>
 
 // https://stackoverflow.com/a/7477384/2482983
 // +6 for ports
@@ -44,13 +45,14 @@ class BaseSteamNetworkingSocket
 public:
 	void Initialize();
 	ISteamNetworkingSockets &GetSteamInterface() const;
-	std::chrono::high_resolution_clock::duration GetDurationSinceStart(SteamNetworkingMicroseconds t) const;
-	std::chrono::high_resolution_clock::time_point GetStartTime() const;
+	util::Clock::duration GetDurationSinceStart(SteamNetworkingMicroseconds t) const;
+	util::Clock::time_point GetStartTime() const;
+	SteamNetworkingMicroseconds GetSteamStartTime() const;
 	static void DebugOutput(ESteamNetworkingSocketsDebugOutputType eType,const char *msg);
 private:
 	ISteamNetworkingSockets *m_pInterface = nullptr;
 	SteamNetworkingMicroseconds m_steamStartTime = 0;
-	std::chrono::high_resolution_clock::time_point m_chronoStartTime;
+	util::Clock::time_point m_chronoStartTime;
 };
 
 #endif

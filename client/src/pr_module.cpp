@@ -24,6 +24,7 @@ namespace pragma::networking
 		bool Initialize(pragma::networking::Error &outErr);
 		virtual std::string GetIdentifier() const override;
 		virtual bool Connect(const std::string &ip,pragma::networking::Port port,pragma::networking::Error &outErr) override;
+		virtual bool Connect(uint64_t steamId,Error &outErr) override;
 		virtual bool Disconnect(pragma::networking::Error &outErr) override;
 		virtual bool SendPacket(pragma::networking::Protocol protocol,NetPacket &packet,pragma::networking::Error &outErr) override;
 		virtual bool IsRunning() const override;
@@ -34,6 +35,11 @@ namespace pragma::networking
 		virtual std::optional<std::string> GetIP() const override;
 		virtual std::optional<pragma::networking::Port> GetLocalTCPPort() const override;
 		virtual std::optional<pragma::networking::Port> GetLocalUDPPort() const override;
+#ifdef USE_STEAMWORKS_NETWORKING
+		virtual std::string GetNetworkLayerIdentifier() const override {return "steam_networking";}
+#else
+		virtual std::string GetNetworkLayerIdentifier() const override {return "game_networking";}
+#endif
 #ifndef USE_STEAMWORKS_NETWORKING
 		virtual void OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t *cbInfo) override;
 #endif
@@ -71,6 +77,13 @@ bool pragma::networking::SteamClient::Connect(const std::string &ip,pragma::netw
 	if(ipAddr.ParseString((ip +':' +std::to_string(port)).c_str()) == false)
 		return false;
 	m_hConnection = GetSteamInterface().ConnectByIPAddress(ipAddr);
+	return m_hConnection != k_HSteamNetConnection_Invalid;
+}
+bool pragma::networking::SteamClient::Connect(uint64_t steamId,Error &outErr)
+{
+	SteamNetworkingIdentity identity {};
+	identity.SetSteamID64(steamId);
+	m_hConnection = GetSteamInterface().ConnectP2P(identity,0);
 	return m_hConnection != k_HSteamNetConnection_Invalid;
 }
 bool pragma::networking::SteamClient::Disconnect(pragma::networking::Error &outErr)

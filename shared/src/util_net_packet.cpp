@@ -1,5 +1,7 @@
 #include "pr_steam_networking/util_net_packet.hpp"
 
+#include <iostream>
+#pragma optimize("",off)
 std::optional<NetPacket> NetPacketReceiver::ReceiveDataFragment(BaseSteamNetworkingSocket &sns,ISteamNetworkingMessage &msg)
 {
 	if(m_bReceivedHeader == false)
@@ -19,8 +21,7 @@ std::optional<NetPacket> NetPacketReceiver::ReceiveDataFragment(BaseSteamNetwork
 	m_packetBody = NetPacket{m_packetHeader.messageId,size};
 	memcpy(m_packetBody->GetData(),data,size);
 
-	auto t = sns.GetStartTime() +sns.GetDurationSinceStart(msg.GetTimeReceived());
-	m_packetBody.SetTimeActivated(std::chrono::duration_cast<std::chrono::nanoseconds>(t.time_since_epoch()).count());
+	m_packetBody.SetTimeActivated(util::clock::to_int(util::clock::get_duration_since_start()));
 	return m_packetBody;
 }
 
@@ -68,3 +69,4 @@ bool NetPacketDispatcher::SendData(
 	}
 	return false;
 }
+#pragma optimize("",on)

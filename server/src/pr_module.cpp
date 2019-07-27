@@ -86,6 +86,8 @@ bool pragma::networking::SteamServerClient::SendPacket(pragma::networking::Proto
 
 /////////////
 
+#include <steam/isteamgameserver.h>
+#include <steam/steam_gameserver.h>
 namespace pragma::networking
 {
 	class SteamServer
@@ -99,11 +101,16 @@ namespace pragma::networking
 		virtual bool DoShutdown(pragma::networking::Error &outErr) override;
 		virtual bool Heartbeat() override;
 		virtual std::optional<std::string> GetHostIP() const override;
-		virtual std::optional<pragma::networking::Port> GetLocalTCPPort() const override;
-		virtual std::optional<pragma::networking::Port> GetLocalUDPPort() const override;
+		virtual std::optional<pragma::networking::Port> GetHostPort() const override;
+		virtual std::optional<uint64_t> GetSteamId() const override;
+		virtual bool IsPeerToPeer() const override;
 		virtual bool PollEvents(pragma::networking::Error &outErr) override;
 		virtual void SetTimeoutDuration(float duration) override;
-
+#ifdef USE_STEAMWORKS_NETWORKING
+		virtual std::string GetNetworkLayerIdentifier() const override {return "steam_networking";}
+#else
+		virtual std::string GetNetworkLayerIdentifier() const override {return "game_networking";}
+#endif
 		ISteamNetworkingSockets &GetInterface() const;
 
 #ifndef USE_STEAMWORKS_NETWORKING
@@ -111,7 +118,7 @@ namespace pragma::networking
 #endif
 	protected:
 		bool PollMessages(pragma::networking::Error &outErr);
-		virtual bool DoStart(pragma::networking::Error &outErr) override;
+		virtual bool DoStart(Error &outErr,uint16_t port,bool useP2PIfAvailable=false) override;
 	private:
 #ifdef USE_STEAMWORKS_NETWORKING
 		STEAM_CALLBACK(SteamServer,OnConnectionStatusChanged,SteamNetConnectionStatusChangedCallback_t);
@@ -121,22 +128,37 @@ namespace pragma::networking
 		HSteamListenSocket m_hListenSock = 0;
 		std::unordered_map<HSteamNetConnection,pragma::networking::SteamServerClient*> m_conHandleToClient = {};
 		pragma::networking::Error m_statusError = {};
+		// Only enabled if peer-to-peer
+		std::optional<CSteamID> m_steamId = {};
 	};
 };
 
-
-bool pragma::networking::SteamServer::DoStart(pragma::networking::Error &outErr)
+bool pragma::networking::SteamServer::DoStart(Error &outErr,uint16_t port,bool useP2PIfAvailable)
 {
 	BaseSteamNetworkingSocket::Initialize();
 
-	SteamNetworkingIPAddr serverLocalAddr;
-	serverLocalAddr.Clear();
-	serverLocalAddr.m_port = 29150; // TODO
-	m_hListenSock = GetSteamInterface().CreateListenSocketIP(serverLocalAddr);
-	if(m_hListenSock == k_HSteamListenSocket_Invalid)
+	if(useP2PIfAvailable == false)
 	{
-		outErr = {pragma::networking::ErrorCode::UnableToListenOnPort,"Failed to listen on port " +std::to_string(serverLocalAddr.m_port) +"!"};
-		return false;
+		SteamNetworkingIPAddr serverLocalAddr;
+		serverLocalAddr.Clear();
+		serverLocalAddr.m_port = port;
+		m_hListenSock = GetSteamInterface().CreateListenSocketIP(serverLocalAddr);
+
+		if(m_hListenSock == k_HSteamListenSocket_Invalid)
+		{
+			outErr = {pragma::networking::ErrorCode::UnableToListenOnPort,"Failed to listen on port " +std::to_string(serverLocalAddr.m_port) +"!"};
+			return false;
+		}
+	}
+	else
+	{
+		m_hListenSock = GetSteamInterface().CreateListenSocketP2P(0);
+		if(m_hListenSock == k_HSteamListenSocket_Invalid)
+		{
+			outErr = {pragma::networking::ErrorCode::UnableToListenOnPort,"Failed to create P2P listener!"};
+			return false;
+		}
+		m_steamId = SteamUser()->GetSteamID();
 	}
 	return true;
 }
@@ -152,10 +174,13 @@ std::optional<std::string> pragma::networking::SteamServer::GetHostIP() const
 {
 	return {}; // TODO
 }
-std::optional<pragma::networking::Port> pragma::networking::SteamServer::GetLocalTCPPort() const {return {};}
-std::optional<pragma::networking::Port> pragma::networking::SteamServer::GetLocalUDPPort() const {return {};}
+std::optional<pragma::networking::Port> pragma::networking::SteamServer::GetHostPort() const {return {};}
+std::optional<uint64_t> pragma::networking::SteamServer::GetSteamId() const {return m_steamId.has_value() ? m_steamId->ConvertToUint64() : std::optional<uint64_t>{};}
+bool pragma::networking::SteamServer::IsPeerToPeer() const {return m_steamId.has_value();}
 bool pragma::networking::SteamServer::PollMessages(pragma::networking::Error &outErr)
 {
+	SteamAPI_RunCallbacks();
+
 	std::array<ISteamNetworkingMessage*,256> incommingMessages;
 	auto numMsgs = GetSteamInterface().ReceiveMessagesOnListenSocket(m_hListenSock,incommingMessages.data(),incommingMessages.size());
 	if(numMsgs < 0)
@@ -283,26 +308,6 @@ extern "C"
 	}
 	PRAGMA_EXPORT void initialize_game_server(NetworkState &nw,std::unique_ptr<pragma::networking::IServer> &outServer,pragma::networking::Error &outErr)
 	{
-#ifdef USE_STEAMWORKS_NETWORKING
-		std::string errSteamworks;
-		auto libSteamworks = nw.InitializeLibrary("steamworks/pr_steamworks",&errSteamworks);
-		if(libSteamworks == nullptr)
-		{
-			outErr = {pragma::networking::ErrorCode::GenericError,"Unable to load steamworks module!"};
-			return;
-		}
-		auto *fInitSteamworks = libSteamworks->FindSymbolAddress<bool(*)()>("wv_steamworks_initialize");
-		if(fInitSteamworks == nullptr)
-		{
-			outErr = {pragma::networking::ErrorCode::GenericError,"Function 'wv_steamworks_initialize' not found in steamworks module!"};
-			return;
-		}
-		if(fInitSteamworks() == false)
-		{
-			outErr = {pragma::networking::ErrorCode::GenericError,"Unable to initialize steamworks!"};
-			return;
-		}
-#endif
 		outServer = std::make_unique<pragma::networking::SteamServer>();
 	}
 };
