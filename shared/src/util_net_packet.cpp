@@ -1,7 +1,5 @@
 #include "pr_steam_networking/util_net_packet.hpp"
 
-#include <iostream>
-#pragma optimize("",off)
 std::optional<NetPacket> NetPacketReceiver::ReceiveDataFragment(BaseSteamNetworkingSocket &sns,ISteamNetworkingMessage &msg)
 {
 	if(m_bReceivedHeader == false)
@@ -69,4 +67,3 @@ bool NetPacketDispatcher::SendData(
 	}
 	return false;
 }
-#pragma optimize("",on)

@@ -9,6 +9,7 @@ project(${PROJ_NAME} CXX)
 # set(PRECOMPILED_HEADER "stdafx")
 
 add_include_dir(networkmanager)
+add_include_dir(glm)
 
 if(CONFIG_USE_STEAMWORKS_NETWORKING MATCHES ON)
 	add_definitions(-DUSE_STEAMWORKS_NETWORKING)

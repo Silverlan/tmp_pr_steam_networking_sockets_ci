@@ -9,7 +9,6 @@
 #include <array>
 #include <string>
 
-#pragma optimize("",off)
 namespace pragma::networking
 {
 	class SteamClient
@@ -81,10 +80,14 @@ bool pragma::networking::SteamClient::Connect(const std::string &ip,pragma::netw
 }
 bool pragma::networking::SteamClient::Connect(uint64_t steamId,Error &outErr)
 {
+#ifdef USE_STEAMWORKS_NETWORKING
 	SteamNetworkingIdentity identity {};
 	identity.SetSteamID64(steamId);
 	m_hConnection = GetSteamInterface().ConnectP2P(identity,0);
 	return m_hConnection != k_HSteamNetConnection_Invalid;
+#else
+	return false;
+#endif
 }
 bool pragma::networking::SteamClient::Disconnect(pragma::networking::Error &outErr)
 {
@@ -216,4 +219,3 @@ extern "C"
 			outClient = nullptr;
 	}
 };
-#pragma optimize("",on)

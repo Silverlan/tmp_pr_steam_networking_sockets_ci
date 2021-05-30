@@ -12,8 +12,6 @@
 #include <array>
 #include <string>
 
-#pragma optimize("",off)
-
 namespace pragma::networking
 {
 	class SteamServer;
@@ -86,8 +84,6 @@ bool pragma::networking::SteamServerClient::SendPacket(pragma::networking::Proto
 
 /////////////
 
-#include <steam/isteamgameserver.h>
-#include <steam/steam_gameserver.h>
 namespace pragma::networking
 {
 	class SteamServer
@@ -136,6 +132,9 @@ namespace pragma::networking
 bool pragma::networking::SteamServer::DoStart(Error &outErr,uint16_t port,bool useP2PIfAvailable)
 {
 	BaseSteamNetworkingSocket::Initialize();
+#ifndef USE_STEAMWORKS_NETWORKING
+	useP2PIfAvailable = false;
+#endif
 
 	if(useP2PIfAvailable == false)
 	{
@@ -150,6 +149,7 @@ bool pragma::networking::SteamServer::DoStart(Error &outErr,uint16_t port,bool u
 			return false;
 		}
 	}
+#ifdef USE_STEAMWORKS_NETWORKING
 	else
 	{
 		m_hListenSock = GetSteamInterface().CreateListenSocketP2P(0);
@@ -160,6 +160,7 @@ bool pragma::networking::SteamServer::DoStart(Error &outErr,uint16_t port,bool u
 		}
 		m_steamId = SteamUser()->GetSteamID();
 	}
+#endif
 	return true;
 }
 bool pragma::networking::SteamServer::DoShutdown(pragma::networking::Error &outErr)
@@ -179,8 +180,6 @@ std::optional<uint64_t> pragma::networking::SteamServer::GetSteamId() const {ret
 bool pragma::networking::SteamServer::IsPeerToPeer() const {return m_steamId.has_value();}
 bool pragma::networking::SteamServer::PollMessages(pragma::networking::Error &outErr)
 {
-	SteamAPI_RunCallbacks();
-
 	std::array<ISteamNetworkingMessage*,256> incommingMessages;
 	auto numMsgs = GetSteamInterface().ReceiveMessagesOnListenSocket(m_hListenSock,incommingMessages.data(),incommingMessages.size());
 	if(numMsgs < 0)
@@ -311,4 +310,3 @@ extern "C"
 		outServer = std::make_unique<pragma::networking::SteamServer>();
 	}
 };
-#pragma optimize("",on)

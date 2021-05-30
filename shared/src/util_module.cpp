@@ -2,7 +2,7 @@
 #include "pr_steam_networking/common.hpp"
 #include <pragma/engine.h>
 
-extern DLLENGINE Engine *engine;
+extern DLLNETWORK Engine *engine;
 static constexpr const char *cvarNameInstances = "steam_networking_sockets_instances";
 static int32_t get_net_lib_instance_count()
 {

@@ -21,6 +21,5 @@ SteamNetworkingMicroseconds BaseSteamNetworkingSocket::GetSteamStartTime() const
 
 void BaseSteamNetworkingSocket::DebugOutput(ESteamNetworkingSocketsDebugOutputType eType,const char *msg)
 {
-	// TODO
-	std::cout<<"Debug Output: "<<msg<<std::endl;
+	std::cout<<"[Steam networking]: "<<msg<<std::endl;
 }
