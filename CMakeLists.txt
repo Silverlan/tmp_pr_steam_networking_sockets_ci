@@ -11,3 +11,10 @@ add_subdirectory(steam_client)
 add_subdirectory(steam_server)
 
 set(CMAKE_CXX_STANDARD 17)
+
+set_target_properties(pr_game_networking_client PROPERTIES FOLDER modules/networking)
+set_target_properties(pr_game_networking_server PROPERTIES FOLDER modules/networking)
+set_target_properties(pr_steam_networking_client PROPERTIES FOLDER modules/networking)
+set_target_properties(pr_steam_networking_server PROPERTIES FOLDER modules/networking)
+
+set_property(GLOBAL PROPERTY PRAGMA_MODULE_SKIP_TARGET_PROPERTY_FOLDER 1)
