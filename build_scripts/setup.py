@@ -20,9 +20,18 @@ if not Path(ninja_root).is_dir():
         http_extract("https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip")
 
 # Based on build instructions: https://github.com/ValveSoftware/GameNetworkingSockets/blob/master/BUILDING.md
+os.chdir(deps_dir)
 gns_root = deps_dir +"/GameNetworkingSockets"
+if not Path(gns_root).is_dir():
+    print_msg("GameNetworkingSockets not found, downloading...")
+    git_clone("https://github.com/ValveSoftware/GameNetworkingSockets.git")
+
 os.chdir(gns_root)
-mkdir("GameNetworkingSockets",cd=True)
+reset_to_commit("505c697d0abef5da2ff3be35aa4ea3687597c3e9")
+
+script_path = os.path.abspath(__file__)
+print_msg("Applying patch...")
+subprocess.run(["git","apply",os.path.dirname(script_path) +"/GameNetworkingSockets.patch"],check=False,shell=True)
 
 cp(ninja_root +"/" +ninja_executable_name,gns_root +"/")
 ninja_path_to_executable = gns_root +"/"
@@ -48,10 +57,10 @@ if platform == "win32":
 
     print_msg("Building GameNetworkingSockets...")
     vsdevcmd_path = determine_vsdevcmd_path(deps_dir)
-    os.system("\"" +os.path.normpath(vsdevcmd_path) + "\"&" +'cmake -S . -B build -G Ninja')
+    os.system("\"" +os.path.normpath(vsdevcmd_path) + "\" -arch=x64&" +'cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo')
 
     os.chdir("build")
-    os.system("\"" +os.path.normpath(vsdevcmd_path) + "\"&ninja")
+    os.system("\"" +os.path.normpath(vsdevcmd_path) + "\" -arch=x64&ninja")
 else:
     print_msg("Installing required GameNetworkingSockets packages...")
     commands = [

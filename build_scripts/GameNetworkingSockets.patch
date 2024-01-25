@@ -1,0 +1,13 @@
+diff --git a/vcpkg.json b/vcpkg.json
+index 65bf6f6..ac66e71 100644
+--- a/vcpkg.json
++++ b/vcpkg.json
+@@ -5,7 +5,7 @@
+ 	"description": "A basic transport layer for games.",
+ 	"homepage": "https://github.com/ValveSoftware/GameNetworkingSockets",
+ 	"dependencies": [ "protobuf", "openssl" ],
+-	"default-features": [ "openssl" ],
++	"default-features": [ "openssl", "libsodium" ],
+ 	"features": {
+ 		"openssl": {
+ 			"description": "Use OpenSSL as the crypto provider.  This is the default.",
