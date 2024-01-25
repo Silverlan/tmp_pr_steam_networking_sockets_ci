@@ -76,4 +76,4 @@ else:
 
 cmake_args.append("-DDEPENDENCY_VALVE_GAMENETWORKINGSOCKETS_INCLUDE=" +gns_root +"/include")
 cmake_args.append("-DDEPENDENCY_VALVE_GAMENETWORKINGSOCKETS_LIBRARY=" +gns_root +"/build/src/GameNetworkingSockets.lib")
-cmake_args.append("-DDEPENDENCY_GAMENETWORKINGSOCKETS_BINARY_DIR=" +gns_root +"/build/bin/")
+cmake_args.append("-DDEPENDENCY_GAMENETWORKINGSOCKETS_BINARY_DIR=" +gns_root +"/build/bin")

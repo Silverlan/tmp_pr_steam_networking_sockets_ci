@@ -104,13 +104,20 @@ namespace pragma::networking {
 #else
 		void OnConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t *pCallback);
 #endif
+		static std::unordered_map<HSteamListenSocket, SteamServer *> g_listenSocketToServer;
+		static std::mutex g_listenSocketToServerMutex;
+
 		HSteamListenSocket m_hListenSock = 0;
+		HSteamNetPollGroup m_hPollGroup = 0;
 		std::unordered_map<HSteamNetConnection, pragma::networking::SteamServerClient *> m_conHandleToClient = {};
 		pragma::networking::Error m_statusError = {};
 		// Only enabled if peer-to-peer
 		std::optional<CSteamID> m_steamId = {};
 	};
 };
+
+std::unordered_map<HSteamListenSocket, pragma::networking::SteamServer *> pragma::networking::SteamServer::g_listenSocketToServer {};
+std::mutex pragma::networking::SteamServer::g_listenSocketToServerMutex {};
 
 bool pragma::networking::SteamServer::DoStart(Error &outErr, uint16_t port, bool useP2PIfAvailable)
 {
@@ -126,14 +133,15 @@ bool pragma::networking::SteamServer::DoStart(Error &outErr, uint16_t port, bool
 		SteamNetworkingConfigValue_t opt;
 		opt.SetPtr(
 		  k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged, (void *)+[](SteamNetConnectionStatusChangedCallback_t *pInfo) {
-			  auto *p = reinterpret_cast<SteamServer *>(SteamNetworkingSockets()->GetConnectionUserData(pInfo->m_hConn));
-			  if(!p)
+			  g_listenSocketToServerMutex.lock();
+			  auto it = g_listenSocketToServer.find(pInfo->m_info.m_hListenSocket);
+			  auto *sv = it->second;
+			  g_listenSocketToServerMutex.unlock();
+			  if(!sv)
 				  return;
-			  p->OnSteamNetConnectionStatusChanged(pInfo);
+			  sv->OnSteamNetConnectionStatusChanged(pInfo);
 		  });
 		m_hListenSock = GetSteamInterface().CreateListenSocketIP(serverLocalAddr, 1, &opt);
-		GetSteamInterface().SetConnectionUserData(m_hListenSock, reinterpret_cast<int64_t>(this));
-
 		if(m_hListenSock == k_HSteamListenSocket_Invalid) {
 			outErr = {pragma::networking::ErrorCode::UnableToListenOnPort, "Failed to listen on port " + std::to_string(serverLocalAddr.m_port) + "!"};
 			return false;
@@ -149,9 +157,32 @@ bool pragma::networking::SteamServer::DoStart(Error &outErr, uint16_t port, bool
 		m_steamId = SteamUser()->GetSteamID();
 	}
 #endif
+	g_listenSocketToServerMutex.lock();
+	g_listenSocketToServer[m_hListenSock] = this;
+	g_listenSocketToServerMutex.unlock();
+
+	m_hPollGroup = GetSteamInterface().CreatePollGroup();
+	if(m_hPollGroup == k_HSteamNetPollGroup_Invalid) {
+		outErr = {pragma::networking::ErrorCode::UnableToListenOnPort, "Failed to create poll group!"};
+		return false;
+	}
 	return true;
 }
-bool pragma::networking::SteamServer::DoShutdown(pragma::networking::Error &outErr) { return true; }
+bool pragma::networking::SteamServer::DoShutdown(pragma::networking::Error &outErr)
+{
+	if(m_hListenSock != k_HSteamListenSocket_Invalid) {
+		g_listenSocketToServerMutex.lock();
+		auto it = g_listenSocketToServer.find(m_hListenSock);
+		if(it != g_listenSocketToServer.end())
+			g_listenSocketToServer.erase(it);
+		g_listenSocketToServerMutex.unlock();
+		GetInterface().CloseListenSocket(m_hListenSock);
+	}
+
+	if(m_hPollGroup != k_HSteamNetPollGroup_Invalid)
+		GetInterface().DestroyPollGroup(m_hPollGroup);
+	return true;
+}
 bool pragma::networking::SteamServer::Heartbeat()
 {
 	return true; // TODO
@@ -166,7 +197,7 @@ bool pragma::networking::SteamServer::IsPeerToPeer() const { return m_steamId.ha
 bool pragma::networking::SteamServer::PollMessages(pragma::networking::Error &outErr)
 {
 	std::array<ISteamNetworkingMessage *, 256> incommingMessages;
-	auto numMsgs = GetSteamInterface().ReceiveMessagesOnConnection(m_hListenSock, incommingMessages.data(), incommingMessages.size());
+	auto numMsgs = GetSteamInterface().ReceiveMessagesOnPollGroup(m_hPollGroup, incommingMessages.data(), incommingMessages.size());
 	if(numMsgs < 0)
 		return false;
 	if(numMsgs == 0)
@@ -223,6 +254,13 @@ void pragma::networking::SteamServer::OnConnectionStatusChanged(SteamNetConnecti
 			}
 			auto itClient = m_conHandleToClient.find(pInfo->m_hConn);
 			if(itClient == m_conHandleToClient.end()) {
+				// Assign the poll group
+				if(!GetSteamInterface().SetConnectionPollGroup(pInfo->m_hConn, m_hPollGroup)) {
+					GetSteamInterface().CloseConnection(pInfo->m_hConn, 0, nullptr, false);
+					m_statusError = {pragma::networking::ErrorCode::UnableToAcceptClient, "Failed to assign poll group!", result};
+					break;
+				}
+
 				// New client
 				auto cl = AddClient<pragma::networking::SteamServerClient>(*this, pInfo->m_hConn);
 				m_conHandleToClient[pInfo->m_hConn] = cl.get();

@@ -70,7 +70,10 @@ bool pragma::networking::SteamClient::Connect(const std::string &ip, pragma::net
 	SteamNetworkingConfigValue_t opt;
 	opt.SetPtr(
 	  k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged, (void *)+[](SteamNetConnectionStatusChangedCallback_t *pInfo) {
-		  auto *p = reinterpret_cast<SteamClient *>(SteamNetworkingSockets()->GetConnectionUserData(pInfo->m_hConn));
+		  auto userData = SteamNetworkingSockets()->GetConnectionUserData(pInfo->m_hConn);
+		  if(userData == -1)
+			  return;
+		  auto *p = reinterpret_cast<SteamClient *>(userData);
 		  if(!p)
 			  return;
 		  p->OnSteamNetConnectionStatusChanged(pInfo);

@@ -1,5 +1,8 @@
-SET(GAMENETWORKINGSOCKETS_INSTALL_DIR modules/networking/gamenetworkingsockets)
+SET(GAMENETWORKINGSOCKETS_INSTALL_DIR modules/networking/game_networking)
 pragma_install_create_directory(${GAMENETWORKINGSOCKETS_INSTALL_DIR})
+
+pragma_install_lib("${CMAKE_CURRENT_BINARY_DIR}/modules/pr_steam_networking_sockets/client/${PR_MODULE_INSTALL_SUBDIR}/${OS_LIB_BIN_PRE}pr_game_networking_client${OS_LIB_BIN_EXT}" "${GAMENETWORKINGSOCKETS_INSTALL_DIR}" OPTIONAL)
+pragma_install_lib("${CMAKE_CURRENT_BINARY_DIR}/modules/pr_steam_networking_sockets/server/${PR_MODULE_INSTALL_SUBDIR}/${OS_LIB_BIN_PRE}pr_game_networking_server${OS_LIB_BIN_EXT}" "${GAMENETWORKINGSOCKETS_INSTALL_DIR}" OPTIONAL)
 
 if(WIN32)
     pragma_install_file("${DEPENDENCY_GAMENETWORKINGSOCKETS_BINARY_DIR}/GameNetworkingSockets.dll" "${GAMENETWORKINGSOCKETS_INSTALL_DIR}" OPTIONAL)
@@ -7,4 +10,17 @@ if(WIN32)
     pragma_install_file("${DEPENDENCY_GAMENETWORKINGSOCKETS_BINARY_DIR}/libprotobuf.dll" "${GAMENETWORKINGSOCKETS_INSTALL_DIR}" OPTIONAL)
 else()
     pragma_install_file("${DEPENDENCY_GAMENETWORKINGSOCKETS_BINARY_DIR}/libGameNetworkingSockets.so" "${GAMENETWORKINGSOCKETS_INSTALL_DIR}" OPTIONAL)
+endif()
+
+if(${CONFIG_ENABLE_STEAM_NETWORKING_SOCKETS})
+    SET(STEAMNETWORKINGSOCKETS_INSTALL_DIR modules/networking/steam_networking)
+    pragma_install_create_directory(${STEAMNETWORKINGSOCKETS_INSTALL_DIR})
+
+    pragma_install_lib("${CMAKE_CURRENT_BINARY_DIR}/modules/pr_steam_networking_sockets/steam_client/${PR_MODULE_INSTALL_SUBDIR}/${OS_LIB_BIN_PRE}pr_steam_networking_client${OS_LIB_BIN_EXT}" "${STEAMNETWORKINGSOCKETS_INSTALL_DIR}" OPTIONAL)
+    pragma_install_lib("${CMAKE_CURRENT_BINARY_DIR}/modules/pr_steam_networking_sockets/steam_server/${PR_MODULE_INSTALL_SUBDIR}/${OS_LIB_BIN_PRE}pr_steam_networking_server${OS_LIB_BIN_EXT}" "${STEAMNETWORKINGSOCKETS_INSTALL_DIR}" OPTIONAL)
+
+    # TODO
+    if(WIN32)
+    else()
+    endif()
 endif()
