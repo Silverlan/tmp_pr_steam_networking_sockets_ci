@@ -31,7 +31,8 @@ bool NetPacketDispatcher::SendPacket(ISteamNetworkingSockets &sns, uint32_t hCon
 bool NetPacketDispatcher::SendData(ISteamNetworkingSockets &sns, uint32_t hConnection, pragma::networking::Protocol protocol, const void *data, uint32_t dataSize, pragma::networking::Error &outErr)
 {
 	auto sendFlags = get_send_flags(protocol);
-	auto eResult = sns.SendMessageToConnection(hConnection, data, dataSize, sendFlags);
+	int64 msgNumber;
+	auto eResult = sns.SendMessageToConnection(hConnection, data, dataSize, sendFlags, &msgNumber);
 	switch(eResult) {
 	case k_EResultOK:
 		return true;

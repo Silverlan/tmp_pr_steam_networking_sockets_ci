@@ -10,13 +10,7 @@
 #include <string>
 
 namespace pragma::networking {
-	class SteamClient : public pragma::networking::IClient,
-	                    public NetPacketReceiver,
-	                    public NetPacketDispatcher,
-#ifndef USE_STEAMWORKS_NETWORKING
-	                    private ISteamNetworkingSocketsCallbacks,
-#endif
-	                    public BaseSteamNetworkingSocket {
+	class SteamClient : public pragma::networking::IClient, public NetPacketReceiver, public NetPacketDispatcher, public BaseSteamNetworkingSocket {
 	  public:
 		bool Initialize(pragma::networking::Error &outErr);
 		virtual std::string GetIdentifier() const override;
@@ -38,7 +32,7 @@ namespace pragma::networking {
 		virtual std::string GetNetworkLayerIdentifier() const override { return "game_networking"; }
 #endif
 #ifndef USE_STEAMWORKS_NETWORKING
-		virtual void OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t *cbInfo) override;
+		void OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t *cbInfo);
 #endif
 	  protected:
 		bool PollMessages(pragma::networking::Error &outErr);
@@ -49,7 +43,7 @@ namespace pragma::networking {
 		void OnConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t *pCallback);
 #endif
 		HSteamNetConnection m_hConnection = k_HSteamNetConnection_Invalid;
-		SteamNetworkingQuickConnectionStatus m_connectionStatus = {};
+		SteamNetConnectionRealTimeStatus_t m_connectionStatus = {};
 		bool m_bConnected = false;
 	};
 };
@@ -73,7 +67,16 @@ bool pragma::networking::SteamClient::Connect(const std::string &ip, pragma::net
 	SteamNetworkingIPAddr ipAddr {};
 	if(ipAddr.ParseString((ip + ':' + std::to_string(port)).c_str()) == false)
 		return false;
-	m_hConnection = GetSteamInterface().ConnectByIPAddress(ipAddr);
+	SteamNetworkingConfigValue_t opt;
+	opt.SetPtr(
+	  k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged, (void *)+[](SteamNetConnectionStatusChangedCallback_t *pInfo) {
+		  auto *p = reinterpret_cast<SteamClient *>(SteamNetworkingSockets()->GetConnectionUserData(pInfo->m_hConn));
+		  if(!p)
+			  return;
+		  p->OnSteamNetConnectionStatusChanged(pInfo);
+	  });
+	m_hConnection = GetSteamInterface().ConnectByIPAddress(ipAddr, 1, &opt);
+	GetSteamInterface().SetConnectionUserData(m_hConnection, reinterpret_cast<int64_t>(this));
 	return m_hConnection != k_HSteamNetConnection_Invalid;
 }
 bool pragma::networking::SteamClient::Connect(uint64_t steamId, Error &outErr)
@@ -133,9 +136,9 @@ bool pragma::networking::SteamClient::PollEvents(pragma::networking::Error &outE
 {
 	auto success = PollMessages(outErr);
 #ifndef USE_STEAMWORKS_NETWORKING
-	GetSteamInterface().RunCallbacks(this);
+	GetSteamInterface().RunCallbacks();
 #endif
-	GetSteamInterface().GetQuickConnectionStatus(m_hConnection, &m_connectionStatus);
+	GetSteamInterface().GetConnectionRealTimeStatus(m_hConnection, &m_connectionStatus, 0, nullptr);
 	return success;
 }
 uint16_t pragma::networking::SteamClient::GetLatency() const { return m_connectionStatus.m_nPing; }
