@@ -19,13 +19,12 @@
 
 // https://stackoverflow.com/a/7477384/2482983
 // +6 for ports
-constexpr size_t MAX_IP_CHAR_LENGTH = 45 +6;
+constexpr size_t MAX_IP_CHAR_LENGTH = 45 + 6;
 
 static int get_send_flags(pragma::networking::Protocol protocol)
 {
 	int sendFlags = k_nSteamNetworkingSend_NoNagle; // TODO: Allow caller to control nagle?
-	switch(protocol)
-	{
+	switch(protocol) {
 	case pragma::networking::Protocol::FastUnreliable:
 		sendFlags |= k_nSteamNetworkingSend_Unreliable;
 		break;
@@ -40,16 +39,15 @@ static int get_send_flags(pragma::networking::Protocol protocol)
 bool initialize_steam_game_networking_sockets(std::string &err);
 void kill_steam_game_networking_sockets();
 
-class BaseSteamNetworkingSocket
-{
-public:
+class BaseSteamNetworkingSocket {
+  public:
 	void Initialize();
 	ISteamNetworkingSockets &GetSteamInterface() const;
 	util::Clock::duration GetDurationSinceStart(SteamNetworkingMicroseconds t) const;
 	util::Clock::time_point GetStartTime() const;
 	SteamNetworkingMicroseconds GetSteamStartTime() const;
-	static void DebugOutput(ESteamNetworkingSocketsDebugOutputType eType,const char *msg);
-private:
+	static void DebugOutput(ESteamNetworkingSocketsDebugOutputType eType, const char *msg);
+  private:
 	ISteamNetworkingSockets *m_pInterface = nullptr;
 	SteamNetworkingMicroseconds m_steamStartTime = 0;
 	util::Clock::time_point m_chronoStartTime;

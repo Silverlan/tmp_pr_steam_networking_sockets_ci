@@ -7,22 +7,20 @@
 #include <optional>
 
 class BaseSteamNetworkingSocket;
-class NetPacketReceiver
-{
-public:
-	std::optional<NetPacket> ReceiveDataFragment(BaseSteamNetworkingSocket &sns,ISteamNetworkingMessage &msg);
-private:
+class NetPacketReceiver {
+  public:
+	std::optional<NetPacket> ReceiveDataFragment(BaseSteamNetworkingSocket &sns, ISteamNetworkingMessage &msg);
+  private:
 	HeaderData m_packetHeader = {};
 	NetPacket m_packetBody;
 	bool m_bReceivedHeader = false;
 };
 
 class ISteamNetworkingSockets;
-class NetPacketDispatcher
-{
-public:
-	bool SendData(ISteamNetworkingSockets &sns,uint32_t hConnection,pragma::networking::Protocol protocol,const void *data,uint32_t dataSize,pragma::networking::Error &outErr);
-	bool SendPacket(ISteamNetworkingSockets &sns,uint32_t hConnection,pragma::networking::Protocol protocol,NetPacket &packet,pragma::networking::Error &outErr);
+class NetPacketDispatcher {
+  public:
+	bool SendData(ISteamNetworkingSockets &sns, uint32_t hConnection, pragma::networking::Protocol protocol, const void *data, uint32_t dataSize, pragma::networking::Error &outErr);
+	bool SendPacket(ISteamNetworkingSockets &sns, uint32_t hConnection, pragma::networking::Protocol protocol, NetPacket &packet, pragma::networking::Error &outErr);
 };
 
 #endif
