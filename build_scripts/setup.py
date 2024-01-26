@@ -21,6 +21,7 @@ if not Path(ninja_root).is_dir():
         http_extract("https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip")
 
 # Based on build instructions: https://github.com/ValveSoftware/GameNetworkingSockets/blob/master/BUILDING.md
+os.chdir(deps_dir)
 gns_root = deps_dir +"/GameNetworkingSockets"
 if not Path(gns_root).is_dir():
     print_msg("GameNetworkingSockets not found, downloading...")
