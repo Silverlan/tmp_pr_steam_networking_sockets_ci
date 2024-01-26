@@ -5,8 +5,8 @@ message("---------------- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX Copy:")
 message("${CMAKE_CURRENT_BINARY_DIR}/modules/pr_steam_networking_sockets/client/${PR_MODULE_INSTALL_SUBDIR}/${OS_LIB_BIN_PRE}pr_game_networking_client${OS_LIB_BIN_EXT}")
 message("TO")
 message("${GAMENETWORKINGSOCKETS_INSTALL_DIR}")
-pragma_install_lib("${CMAKE_CURRENT_BINARY_DIR}/modules/pr_game_networking_client/client/${PR_MODULE_INSTALL_SUBDIR}/${OS_LIB_BIN_PRE}pr_game_networking_client${OS_LIB_BIN_EXT}" "${GAMENETWORKINGSOCKETS_INSTALL_DIR}" OPTIONAL)
-pragma_install_lib("${CMAKE_CURRENT_BINARY_DIR}/modules/pr_game_networking_server/server/${PR_MODULE_INSTALL_SUBDIR}/${OS_LIB_BIN_PRE}pr_game_networking_server${OS_LIB_BIN_EXT}" "${GAMENETWORKINGSOCKETS_INSTALL_DIR}" OPTIONAL)
+pragma_install_lib("${CMAKE_CURRENT_BINARY_DIR}/modules/pr_steam_networking_sockets/client/${PR_MODULE_INSTALL_SUBDIR}/${OS_LIB_BIN_PRE}pr_game_networking_client${OS_LIB_BIN_EXT}" "${GAMENETWORKINGSOCKETS_INSTALL_DIR}" OPTIONAL)
+pragma_install_lib("${CMAKE_CURRENT_BINARY_DIR}/modules/pr_steam_networking_sockets/server/${PR_MODULE_INSTALL_SUBDIR}/${OS_LIB_BIN_PRE}pr_game_networking_server${OS_LIB_BIN_EXT}" "${GAMENETWORKINGSOCKETS_INSTALL_DIR}" OPTIONAL)
 
 if(WIN32)
     pragma_install_file("${DEPENDENCY_GAMENETWORKINGSOCKETS_BINARY_DIR}/GameNetworkingSockets.dll" "${GAMENETWORKINGSOCKETS_INSTALL_DIR}" OPTIONAL)
@@ -20,8 +20,8 @@ if(${CONFIG_ENABLE_STEAM_NETWORKING_SOCKETS})
     SET(STEAMNETWORKINGSOCKETS_INSTALL_DIR modules/networking/steam_networking)
     pragma_install_create_directory(${STEAMNETWORKINGSOCKETS_INSTALL_DIR})
 
-    pragma_install_lib("${CMAKE_CURRENT_BINARY_DIR}/modules/pr_steam_networking_client/steam_client/${PR_MODULE_INSTALL_SUBDIR}/${OS_LIB_BIN_PRE}pr_steam_networking_client${OS_LIB_BIN_EXT}" "${STEAMNETWORKINGSOCKETS_INSTALL_DIR}" OPTIONAL)
-    pragma_install_lib("${CMAKE_CURRENT_BINARY_DIR}/modules/pr_steam_networking_server/steam_server/${PR_MODULE_INSTALL_SUBDIR}/${OS_LIB_BIN_PRE}pr_steam_networking_server${OS_LIB_BIN_EXT}" "${STEAMNETWORKINGSOCKETS_INSTALL_DIR}" OPTIONAL)
+    pragma_install_lib("${CMAKE_CURRENT_BINARY_DIR}/modules/pr_steam_networking_sockets/steam_client/${PR_MODULE_INSTALL_SUBDIR}/${OS_LIB_BIN_PRE}pr_steam_networking_client${OS_LIB_BIN_EXT}" "${STEAMNETWORKINGSOCKETS_INSTALL_DIR}" OPTIONAL)
+    pragma_install_lib("${CMAKE_CURRENT_BINARY_DIR}/modules/pr_steam_networking_sockets/steam_server/${PR_MODULE_INSTALL_SUBDIR}/${OS_LIB_BIN_PRE}pr_steam_networking_server${OS_LIB_BIN_EXT}" "${STEAMNETWORKINGSOCKETS_INSTALL_DIR}" OPTIONAL)
 
     # TODO
     if(WIN32)
