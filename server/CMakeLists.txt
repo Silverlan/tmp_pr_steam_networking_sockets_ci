@@ -28,4 +28,4 @@ add_source_path("${CMAKE_CURRENT_LIST_DIR}/../shared")
 link_generic_module_libraries()
 register_pragma_module(${PROJ_NAME})
 
-add_dependencies(${PROJ_NAME_PREFIX}_server server)
+add_dependencies(${PROJ_NAME_PREFIX}_server server ishared)

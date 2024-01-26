@@ -7,9 +7,9 @@ on:
   repository_dispatch:
     types: [init]
 
-concurrency:
-  group: environment-win-${{ github.ref }}
-  cancel-in-progress: true
+#concurrency:
+#  group: environment-win-${{ github.ref }}
+#  cancel-in-progress: true
 
 jobs:
   build:
