@@ -40,7 +40,6 @@ jobs:
         uses: Silverlan/pragma/github_actions/build_generic_module@master
         with:
           module: '${{ steps.module-info.outputs.module_name }}'
-          build-args: '--module pr_game_networking_client --module pr_game_networking_server'
 
       - name: Create Release Files
         shell: bash

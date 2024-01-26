@@ -84,3 +84,6 @@ if platform == "win32":
 else:
     cmake_args.append("-DDEPENDENCY_VALVE_GAMENETWORKINGSOCKETS_LIBRARY=" +gns_root +"/build/bin/libGameNetworkingSockets.so")
 cmake_args.append("-DDEPENDENCY_GAMENETWORKINGSOCKETS_BINARY_DIR=" +gns_root +"/build/bin")
+
+additional_build_targets.append("pr_game_networking_client")
+additional_build_targets.append("pr_game_networking_server")
