@@ -79,5 +79,8 @@ else:
     subprocess.run(["ninja"],check=True)
 
 cmake_args.append("-DDEPENDENCY_VALVE_GAMENETWORKINGSOCKETS_INCLUDE=" +gns_root +"/include")
-cmake_args.append("-DDEPENDENCY_VALVE_GAMENETWORKINGSOCKETS_LIBRARY=" +gns_root +"/build/src/GameNetworkingSockets.lib")
+if platform == "win32":
+    cmake_args.append("-DDEPENDENCY_VALVE_GAMENETWORKINGSOCKETS_LIBRARY=" +gns_root +"/build/src/GameNetworkingSockets.lib")
+else:
+    cmake_args.append("-DDEPENDENCY_VALVE_GAMENETWORKINGSOCKETS_LIBRARY=" +gns_root +"/build/bin/libGameNetworkingSockets.so")
 cmake_args.append("-DDEPENDENCY_GAMENETWORKINGSOCKETS_BINARY_DIR=" +gns_root +"/build/bin")

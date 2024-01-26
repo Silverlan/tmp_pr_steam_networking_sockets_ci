@@ -1,6 +1,6 @@
 {
     "name": "Steam Networking Sockets",
-    "module_name": "pr_steam_networking_sockets",
+    "module_name": "pr_game_networking_client",
     "install_directory": "modules/networking/game_networking/",
     "release_directory": "modules/networking/game_networking/"
 }
