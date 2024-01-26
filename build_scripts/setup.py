@@ -5,6 +5,7 @@ from sys import platform
 from pathlib import Path
 
 # ninja
+os.chdir(deps_dir)
 ninja_root = deps_dir +"/ninja"
 if platform == "linux":
     ninja_executable_name = "ninja"
@@ -20,7 +21,6 @@ if not Path(ninja_root).is_dir():
         http_extract("https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip")
 
 # Based on build instructions: https://github.com/ValveSoftware/GameNetworkingSockets/blob/master/BUILDING.md
-os.chdir(deps_dir)
 gns_root = deps_dir +"/GameNetworkingSockets"
 if not Path(gns_root).is_dir():
     print_msg("GameNetworkingSockets not found, downloading...")
@@ -67,7 +67,7 @@ else:
         "apt install libssl-dev",
         "apt install libprotobuf-dev protobuf-compiler"
     ]
-    install_system_packages(commands)
+    install_system_packages(commands, no_confirm)
 
     print_msg("Building GameNetworkingSockets...")
     mkdir("build",cd=True)

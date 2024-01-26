@@ -35,11 +35,6 @@ jobs:
         id: module-info
         uses: Silverlan/pr_module_template/github_actions/get_module_info@main
 
-      - name: Install Prerequisites
-        shell: bash
-        run: |
-          pip3 install requests
-
       - name: Build Module
         id: build-module
         uses: Silverlan/pragma/github_actions/build_generic_module@master
