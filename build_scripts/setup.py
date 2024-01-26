@@ -4,6 +4,12 @@ import sys
 from sys import platform
 from pathlib import Path
 
+import os
+def print_all_files(directory):
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            print(os.path.join(root, file))
+
 # ninja
 os.chdir(deps_dir)
 ninja_root = deps_dir +"/ninja"
@@ -19,6 +25,7 @@ if not Path(ninja_root).is_dir():
         http_extract("https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-win.zip")
     else:
         http_extract("https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip")
+    print_all_files(ninja_root)
 
 # Based on build instructions: https://github.com/ValveSoftware/GameNetworkingSockets/blob/master/BUILDING.md
 os.chdir(deps_dir)
