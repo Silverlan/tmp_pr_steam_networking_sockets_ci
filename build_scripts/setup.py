@@ -1,10 +1,10 @@
 import os
 import subprocess
 import sys
+import stat
 from sys import platform
 from pathlib import Path
 
-import os
 def print_all_files(directory):
     for root, dirs, files in os.walk(directory):
         for file in files:
@@ -25,6 +25,8 @@ if not Path(ninja_root).is_dir():
         http_extract("https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-win.zip")
     else:
         http_extract("https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip")
+        st = os.stat('ninja')
+        os.chmod('ninja', st.st_mode | stat.S_IEXEC)
     print_all_files(ninja_root)
 
 # Based on build instructions: https://github.com/ValveSoftware/GameNetworkingSockets/blob/master/BUILDING.md
