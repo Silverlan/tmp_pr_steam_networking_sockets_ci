@@ -36,7 +36,7 @@ jobs:
 
       - name: Build Module
         id: build-module
-        uses: Silverlan/pragma/github_actions/build_generic_module@master
+        uses: Silverlan/tmp_pragma_ci2/github_actions/build_generic_module@master
         with:
           module: '${{ steps.module-info.outputs.module_name }}:skipBuildTarget'
 
