@@ -38,7 +38,7 @@ jobs:
         id: build-module
         uses: Silverlan/pragma/github_actions/build_generic_module@master
         with:
-          module: '${{ steps.module-info.outputs.module_name }}'
+          module: '${{ steps.module-info.outputs.module_name }}:skipBuildTarget'
 
       - name: Create Release Files
         shell: bash
